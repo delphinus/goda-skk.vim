@@ -14,6 +14,8 @@ let g:goda_skk#completion_backend = #{
       \ selected: {-> pum#complete_info().selected},
       \ confirm: {-> "\<Cmd>call pum#map#confirm()\<CR>"},
       \ close: {-> "\<Cmd>call pum#close()\<CR>"},
+      \ inserted: {-> pum#complete_info().inserted !=# ''},
+      \ cancel: {-> "\<Cmd>call pum#map#cancel()\<CR>"},
       \ }
 
 inoremap <C-j> <Plug>(goda-skk-toggle)

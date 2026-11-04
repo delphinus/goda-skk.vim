@@ -158,17 +158,24 @@ g:goda_skk#mapped_keys                                *g:goda_skk#mapped_keys*
 
 g:goda_skk#completion_backend                  *g:goda_skk#completion_backend*
 		The popup menu of a completion, for EggLikeNewline
-		(<CR> chooses the item selected) and for enabling and
-		disabling, which close it: a |Dictionary| of functions without
-		arguments.
+		(<CR> chooses the item selected), for enabling and disabling,
+		which close it, and for the cancel key (<C-g>) while an item
+		is inserted over the pre-edit, which cancels the completion
+		and puts the pre-edit back: a |Dictionary| of functions
+		without arguments.
 			visible		Whether it is shown.
 			selected	The index of the item selected (-1:
 					none).
 			confirm		The keys that choose the item selected.
 			close		The keys that close it (the item
 					inserted stays).
+			inserted	Whether the item selected is inserted
+					in the buffer.
+			cancel		The keys that cancel it (the text
+					before it comes back).
 		An entry left out is not done.
-		Default: Vim's |popupmenu-completion| (|pumvisible()|, <C-y>).
+		Default: Vim's |popupmenu-completion| (|pumvisible()|, <C-y>,
+		<C-e>).
 		pum.vim:
 >vim
 		let g:goda_skk#completion_backend = #{
@@ -176,6 +183,8 @@ g:goda_skk#completion_backend                  *g:goda_skk#completion_backend*
 		      \ selected: {-> pum#complete_info().selected},
 		      \ confirm: {-> "\<Cmd>call pum#map#confirm()\<CR>"},
 		      \ close: {-> "\<Cmd>call pum#close()\<CR>"},
+		      \ inserted: {-> pum#complete_info().inserted !=# ''},
+		      \ cancel: {-> "\<Cmd>call pum#map#cancel()\<CR>"},
 		      \ }
 <
 g:goda_skk#enabled                                        *g:goda_skk#enabled*

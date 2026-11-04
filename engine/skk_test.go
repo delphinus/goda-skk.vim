@@ -71,6 +71,10 @@ type sim struct {
 	register func(prompt string) string
 	// pum: the popup menu of a completion is shown.
 	pum bool
+	// inserted: the completion inserted an item over uninserted, the line
+	// it cancels back to.
+	inserted   bool
+	uninserted string
 }
 
 func newSim(t *testing.T, cfg Config) *sim {
@@ -138,11 +142,14 @@ func (s *sim) call(fn string, keys ...string) Result {
 	s.p.mu.Lock()
 	res, err := s.p.run(context.Background(), s, fn, keys, Status{
 		Mode: s.mode, PrevInput: prev, Bufnr: 1, Lnum: lnum, Selected: -1,
-		PumVisible: s.pum,
+		PumVisible: s.pum, Inserted: s.pum && s.inserted,
 	}, s.on)
 	s.p.mu.Unlock()
 	if err != nil {
 		s.t.Fatal(err)
+	}
+	if res.CompletionCancel {
+		s.line, s.pum, s.inserted = s.uninserted, false, false
 	}
 	s.apply(res.Keys)
 	if r := res.Restore; r != nil {

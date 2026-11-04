@@ -121,13 +121,15 @@ function! s:status() abort
   else
     let prev = getline('.')[: col('.') - 2]
   endif
-  let [visible, selected, confirm] = [v:false, -1, '']
+  let [visible, selected, confirm, inserted] = [v:false, -1, '', v:false]
   if s:completion('visible', v:false)
     let [visible, selected] = [v:true, s:completion('selected', -1)]
     let confirm = s:completion('confirm', '')
+    let inserted = s:completion('inserted', v:false) ? v:true : v:false
   endif
   return #{mode: mode, prevInput: prev, bufnr: bufnr('%'), lnum: line('.'),
-        \ pumVisible: visible, selected: selected, confirmKey: confirm}
+        \ pumVisible: visible, selected: selected, confirmKey: confirm,
+        \ inserted: inserted}
 endfunction
 
 " The popup menu of insert mode: g:goda_skk#completion_backend.
@@ -136,6 +138,9 @@ let s:native = #{
       \ selected: {-> complete_info(['selected']).selected},
       \ confirm: {-> "\<C-y>"},
       \ close: {-> "\<C-y>"},
+      \ inserted: {-> complete_info(['selected']).selected >= 0
+      \            && &completeopt !~# 'noinsert'},
+      \ cancel: {-> "\<C-e>"},
       \ }
 
 " {name} of the completion backend called, or {default} without it.
@@ -170,6 +175,11 @@ function! goda_skk#handle(func, keys = []) abort
   endif
   let g:goda_skk#state = #{phase: r.phase, henkanFeed: r.henkanFeed}
   let keys .= r.keys
+  if get(r, 'completionCancel', v:false)
+    " The completion inserted an item over the pre-edit: cancelled, it puts
+    " the pre-edit back.
+    let keys .= s:completion('cancel', '')
+  endif
   if r.disable
     call s:disable(r.reenable)
   endif
@@ -531,7 +541,8 @@ function! s:confirm_job() abort
   try
     let r = goda#request('skk', 'handle', 'kakutei', [],
           \ #{mode: 't', prevInput: '', bufnr: bufnr('%'), lnum: line('.'),
-          \   pumVisible: v:false, selected: -1, confirmKey: ''}, v:true)
+          \   pumVisible: v:false, selected: -1, confirmKey: '',
+          \   inserted: v:false}, v:true)
   catch
     return
   endtry
