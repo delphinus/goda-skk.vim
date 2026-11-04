@@ -88,6 +88,14 @@ func buildKeymaps(cfg map[string]map[string]string) map[string]keymap {
 // handleKey runs what key does in the state.
 func handleKey(c *Context, key string) {
 	key = normalizeKey(key)
+	if fn := keyFunction(c, key); fn != "" {
+		functions[fn](c, key)
+	}
+}
+
+// keyFunction is the function key (normalized) runs in the state, "" for
+// none.
+func keyFunction(c *Context, key string) string {
 	var km keymap
 	switch c.state.kind {
 	case stateInput:
@@ -95,7 +103,7 @@ func handleKey(c *Context, key string) {
 	case stateHenkan:
 		km = c.keymaps["henkan"]
 	default:
-		return
+		return ""
 	}
 	fn, ok := km.keys[key]
 	if !ok {
@@ -107,7 +115,18 @@ func handleKey(c *Context, key string) {
 		// skkeleton.nvim).
 		fn = "kanaInput"
 	}
-	functions[fn](c, key)
+	return fn
+}
+
+// cancels: fn with keys (as goda_skk#handle() sends them) runs cancel.
+func cancels(c *Context, fn string, keys []string) bool {
+	switch fn {
+	case "cancel":
+		return true
+	case "handleKey":
+		return len(keys) == 1 && keyFunction(c, normalizeKey(keys[0])) == "cancel"
+	}
+	return false
 }
 
 // defaultMappedKeys are the keys Vim maps while enabled, besides those of

@@ -122,6 +122,47 @@ func TestCompleteDoneAfterKey(t *testing.T) {
 	}
 }
 
+// <C-g> while a completion inserted an item over the reading cancels the
+// completion: the reading is back, and the input goes on from it.
+func TestCancelInsertedCompletion(t *testing.T) {
+	s := newSim(t, Config{})
+	s.typ("Kanji")
+	s.line, s.uninserted = "感じ", s.line
+	s.pum, s.inserted = true, true
+	s.typ("<c-g>")
+	if !s.res.CompletionCancel || s.line != "▽かんじ" || s.preedit() != "▽かんじ" {
+		t.Fatalf("cancel: %v %q %q", s.res.CompletionCancel, s.line, s.preedit())
+	}
+	s.typ(" ")
+	if s.preedit() != "▼漢字" {
+		t.Errorf("the reading is lost: %q", s.preedit())
+	}
+	s.typ("<c-g><c-g>")
+	if s.line != "" {
+		t.Errorf("<c-g> after: %q", s.line)
+	}
+
+	// Selected without inserting (<C-n> of pum.vim): <C-g> cancels the
+	// reading as before.
+	s.typ("Kanji")
+	s.pum = true
+	s.typ("<c-g>")
+	s.pum = false
+	if s.res.CompletionCancel || s.line != "" {
+		t.Errorf("not inserted: %v %q", s.res.CompletionCancel, s.line)
+	}
+
+	// Another key starts over as before.
+	s.typ("Kanji")
+	s.line, s.uninserted = "感じ", s.line
+	s.pum, s.inserted = true, true
+	s.typ("d")
+	s.pum, s.inserted = false, false
+	if s.res.CompletionCancel || s.line != "感じd" {
+		t.Errorf("another key: %v %q", s.res.CompletionCancel, s.line)
+	}
+}
+
 // EggLikeNewline: <CR> with an item selected has Vim choose it, without
 // a new line.
 func TestEggLikeNewlineConfirm(t *testing.T) {

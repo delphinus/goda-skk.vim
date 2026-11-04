@@ -121,6 +121,9 @@ type Status struct {
 	Selected   int    `json:"selected"`
 	// CanConfirm: the completion has keys that choose the item selected.
 	CanConfirm bool `json:"canConfirm"`
+	// Inserted: the item selected is inserted in the buffer (over the
+	// pre-edit).
+	Inserted bool `json:"inserted"`
 }
 
 // Result is the answer to handle.
@@ -162,6 +165,9 @@ type Result struct {
 	// Register is the prompt of a word to register: Vim asks for it, then
 	// runs registerDone with it.
 	Register string `json:"register"`
+	// CompletionCancel: Vim cancels the completion (the cancel of
+	// g:goda_skk#completion_backend), which puts the pre-edit back.
+	CompletionCancel bool `json:"completionCancel"`
 	// CompletionConfirm: Vim chooses the item selected of the completion
 	// (the confirm of g:goda_skk#completion_backend). The keys are not
 	// sent from here: they may have special keys ("\<Cmd>"), whose bytes
@@ -209,6 +215,15 @@ func (p *Plugin) run(ctx context.Context, h sdk.Host, fn string, keys []string, 
 	}
 	// Only now is it known where the last conversion was typed.
 	resolved := c.resolvePendingKakutei()
+	// The item a completion inserted over the pre-edit, and the key
+	// cancels: the completion is cancelled instead, which puts the pre-edit
+	// back, and the input goes on from it.
+	if st.Mode != "t" && st.PumVisible && st.Inserted &&
+		!strings.HasSuffix(st.PrevInput, c.text()) && cancels(c, fn, keys) {
+		res := p.result("")
+		res.CompletionCancel = true
+		return res, nil
+	}
 	// The buffer is not what the pre-edit says (a completion changed it,
 	// or the cursor moved): start over from there.
 	if st.Mode != "t" && !strings.HasSuffix(st.PrevInput, c.text()) {
